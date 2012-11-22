@@ -46,26 +46,21 @@ class EPP:
     def int_to_net(self, value):
         return struct.pack(self.format_32, value)
 
-    def cmd(self, cmd, silent=True):
+    def cmd(self, cmd, silent=False):
         self.write(cmd)
-        #soup = BeautifulStoneSoup(self.read())
-        xml = self.read()
-        soup = BeautifulStoneSoup(xml)
+        soup = BeautifulStoneSoup(self.read())
         response = soup.find('response')
         result = soup.find('result')
         try:
             code = int(result.get('code'))
         except AttributeError:
             print "\nERROR: Could not get result code, exiting."
-            print xml
             exit(1)
-        if not silent:
+        if not silent or code not in (1000, 1300, 1500):
             print("- [%d] %s" % (code, result.msg.text))
         if code == 2308:
-            print("Something wrong!")
             return False
         if code == 2502:
-            print("Limit exceeded.")
             return False
         return response
 
@@ -119,16 +114,65 @@ class EPPObject:
             pass
 
 
+class Contact(EPPObject):
+    def __init__(self, epp, handle=False, **kwargs):
+        self.epp = epp
+        self.handle = handle
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def __unicode__(self):
+        try:
+            self.name != ''
+            return "[%(handle)s] %(name)s, %(street)s, %(pc)s %(city)s (%(cc)s)" % self
+        except:
+            return self.handle
+
+    def available(self):
+        cmd = commands.contact.available % self
+        res = self.epp.cmd(cmd, silent=True)
+        return res.resdata.find('contact:id').get('avail') == 'true'
+
+    def create(self):
+        cmd = commands.contact.create % self
+        res = self.epp.cmd(cmd).resdata
+        return res.find('contact:id').text
+
+    def info(self):
+        cmd = commands.contact.info % self
+        res = self.epp.cmd(cmd).resdata
+        self.roid = res.find('contact:roid').text
+        self.status = res.find('contact:status').get('s')
+        self.name = res.find('contact:name').text
+        try:
+            self.street = res.find('contact:street').text
+        except AttributeError:
+            pass
+        self.city = res.find('contact:city').text
+        try:
+            self.pc = res.find('contact:pc').text
+        except AttributeError:
+            pass
+        self.cc = res.find('contact:cc').text
+        self.voice = res.find('contact:voice').text
+        self.email = res.find('contact:email').text
+        return self
+
+    def update(self):
+        cmd = commands.contact.update % self
+        return self.epp.cmd(cmd)
+
+
 class Domain(EPPObject):
     def __init__(self, epp, domain):
         self.domain = domain
         self.epp = epp
         self.roid = ""
         self.status = ""
-        #self.registrant = Contact()
-        #self.admin = Contact()
-        #self.tech = Contact()
         #self.ns = Nameserver(epp)
+
+    def __unicode__(self):
+        return "[%(domain)s] status: %(status)s, registrant: %(registrant)s, admin: %(admin)s, tech: %(tech)s" % self
 
     def available(self):
         cmd = commands.available % self.domain
@@ -177,6 +221,7 @@ class Domain(EPPObject):
         })
         return self.epp.cmd(cmd)
 
+
 class Nameserver(EPPObject):
     def __init__(self, epp, nameserver=False):
         self.nameserver = nameserver
@@ -189,41 +234,3 @@ class Nameserver(EPPObject):
         cmd = commands.nameserver % self.nameserver
         res = self.epp.cmd(cmd)
         return res.resdata.find('host:addr').text
-
-
-class Contact(EPPObject):
-    def __init__(self, epp, handle=False, **kwargs):
-        self.epp = epp
-        self.handle = handle
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-    def __unicode__(self):
-        return "[%(handle)s] %(name)s, %(street)s, %(pc)s %(city)s (%(cc)s)" % self
-
-    def available(self):
-        cmd = commands.contact.available % self
-        res = self.epp.cmd(cmd, silent=True)
-        return res.resdata.find('contact:id').get('avail') == 'true'
-
-    def create(self):
-        cmd = commands.contact.create % self
-        return self.epp.cmd(cmd)
-
-    def info(self):
-        cmd = commands.contact.info % self
-        res = self.epp.cmd(cmd).resdata
-        self.roid = res.find('contact:roid').text
-        self.status = res.find('contact:status').get('s')
-        self.name = res.find('contact:name').text
-        self.street = res.find('contact:street').text
-        self.city = res.find('contact:city').text
-        self.pc = res.find('contact:pc').text
-        self.cc = res.find('contact:cc').text
-        self.voice = res.find('contact:voice').text
-        self.email = res.find('contact:email').text
-        return self
-
-    def update(self):
-        cmd = commands.contact.update % self
-        return self.epp.cmd(cmd)
