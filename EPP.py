@@ -46,8 +46,8 @@ class EPP:
     def int_to_net(self, value):
         return struct.pack(self.format_32, value)
 
-    def cmd(self, xml, silent=True):
-        self.write(xml)
+    def cmd(self, cmd, silent=True):
+        self.write(cmd)
         #soup = BeautifulStoneSoup(self.read())
         xml = self.read()
         soup = BeautifulStoneSoup(xml)
@@ -76,7 +76,7 @@ class EPP:
             return self.ssl.read(i)
 
     def write(self, xml):
-        epp_as_string = xml #ElementTree.tostring(xml, encoding="UTF-8")
+        epp_as_string = xml
         # +4 for the length field itself (section 4 mandates that)
         # +2 for the CRLF at the end
         length = self.int_to_net(len(epp_as_string) + 4 + 2)
@@ -131,33 +131,33 @@ class Domain(EPPObject):
         #self.ns = Nameserver(epp)
 
     def available(self):
-        xml = sidn.available % self.domain
-        res = self.epp.cmd(xml)
+        cmd = commands.available % self.domain
+        res = self.epp.cmd(cmd)
         if not res:
             # exception would be more fitting
             return False
         return res.resdata.find('domain:name').get('avail') == 'true'
 
     def create(self, contacts, ns):
-        xml = sidn.create % dict({
+        cmd = commands.create % dict({
             'domain': self.domain,
             'ns': ns[0],
             'registrant': contacts['registrant'],
             'admin': contacts['admin'],
             'tech': contacts['tech'],
         })
-        res = self.epp.cmd(xml)
+        res = self.epp.cmd(cmd)
 
     def delete(self, undo=False):
         if undo:
-            xml = sidn.canceldelete % self.domain
+            cmd = commands.canceldelete % self.domain
         else:
-            xml = sidn.delete % self.domain
-        return self.epp.cmd(xml)
+            cmd = commands.delete % self.domain
+        return self.epp.cmd(cmd)
 
     def info(self):
-        xml = sidn.info % self.domain
-        res = self.epp.cmd(xml).resdata
+        cmd = commands.info % self.domain
+        res = self.epp.cmd(cmd).resdata
         self.roid = res.find('domain:roid').text
         self.status = res.find('domain:status').get('s')
         self.registrant = Contact(self.epp, res.find('domain:registrant').text)
@@ -166,16 +166,16 @@ class Domain(EPPObject):
         return self
 
     def token(self):
-        xml = sidn.info % self.domain
-        res = self.epp.cmd(xml)
-        return res.resdata.find('domain:pw')
+        cmd = commands.info % self.domain
+        res = self.epp.cmd(cmd)
+        return res.resdata.find('domain:pw').text
 
     def transfer(self, token):
-        xml = sidn.transfer % dict({
+        cmd = commands.transfer % dict({
             'domain': self.domain,
             'token': token,
         })
-        return self.epp.cmd(xml)
+        return self.epp.cmd(cmd)
 
 class Nameserver(EPPObject):
     def __init__(self, epp, nameserver=False):
@@ -186,8 +186,8 @@ class Nameserver(EPPObject):
         return self.nameserver
 
     def get_ip(self):
-        xml = sidn.nameserver % self.nameserver
-        res = self.epp.cmd(xml)
+        cmd = commands.nameserver % self.nameserver
+        res = self.epp.cmd(cmd)
         return res.resdata.find('host:addr').text
 
 
@@ -205,6 +205,10 @@ class Contact(EPPObject):
         cmd = commands.contact.available % self
         res = self.epp.cmd(cmd, silent=True)
         return res.resdata.find('contact:id').get('avail') == 'true'
+
+    def create(self):
+        cmd = commands.contact.create % self
+        return self.epp.cmd(cmd)
 
     def info(self):
         cmd = commands.contact.info % self
