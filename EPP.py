@@ -4,7 +4,8 @@ import socket
 import ssl
 import struct
 from BeautifulSoup import BeautifulStoneSoup
-from xml import contact as contact_xml, sidn
+import commands
+from commands import contact
 
 
 class EPP:
@@ -72,7 +73,6 @@ class EPP:
         length = self.ssl.read(4)
         if length:
             i = self.int_from_net(length)-4
-            print "Length: %d" % i
             return self.ssl.read(i)
 
     def write(self, xml):
@@ -92,18 +92,17 @@ class EPP:
         print("Connected to %s (v%s)\n" % (svid.text, version.text))
 
         """ Login """
-        xml = sidn.login % self.config
+        xml = commands.login % self.config
         if not self.cmd(xml, silent=True):
             exit(1)
 
     def logout(self):
-        xml = sidn.logout
-        print xml
-        return self.cmd(xml, silent=False)
+        cmd = commands.logout
+        return self.cmd(cmd, silent=True)
 
     def poll(self):
-        xml = sidn.poll
-        return self.cmd(xml)
+        cmd = commands.poll
+        return self.cmd(cmd)
 
 
 class EPPObject:
@@ -203,13 +202,13 @@ class Contact(EPPObject):
         return "[%(handle)s] %(name)s, %(street)s, %(pc)s %(city)s (%(cc)s)" % self
 
     def available(self):
-        xml = contact_xml.available % self.handle
-        res = self.epp.cmd(xml, silent=True)
+        cmd = commands.contact.available % self
+        res = self.epp.cmd(cmd, silent=True)
         return res.resdata.find('contact:id').get('avail') == 'true'
 
     def info(self):
-        xml = contact_xml.info % self.handle
-        res = self.epp.cmd(xml).resdata
+        cmd = commands.contact.info % self
+        res = self.epp.cmd(cmd).resdata
         self.roid = res.find('contact:roid').text
         self.status = res.find('contact:status').get('s')
         self.name = res.find('contact:name').text
@@ -222,5 +221,5 @@ class Contact(EPPObject):
         return self
 
     def update(self):
-        xml = contact_xml.update % self
-        return self.epp.cmd(xml)
+        cmd = commands.contact.update % self
+        return self.epp.cmd(cmd)
