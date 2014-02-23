@@ -3,7 +3,7 @@ import argparse
 import socket
 import ssl
 import struct
-from BeautifulSoup import BeautifulStoneSoup
+from bs4 import BeautifulSoup
 import commands
 from commands import contact
 
@@ -38,11 +38,11 @@ class EPP:
         # Get the size of C integers. We need 32 bits unsigned.
         format_32 = ">I"
         if struct.calcsize(format_32) < 4:
-            format_32 = ">L"              
+            format_32 = ">L"
             if struct.calcsize(format_32) != 4:
                 raise Exception("Cannot find a 32 bits integer")
         elif struct.calcsize(format_32) > 4:
-            format_32 = ">H"                
+            format_32 = ">H"
             if struct.calcsize(format_32) != 4:
                 raise Exception("Cannot find a 32 bits integer")
         else:
@@ -57,7 +57,7 @@ class EPP:
 
     def cmd(self, cmd, silent=False):
         self.write(cmd)
-        soup = BeautifulStoneSoup(self.read())
+        soup = BeautifulSoup(self.read(), features="xml")
         response = soup.find('response')
         result = soup.find('result')
         try:
@@ -90,7 +90,7 @@ class EPP:
     def login(self):
         """ Read greeting """
         greeting = self.read()
-        soup = BeautifulStoneSoup(greeting)
+        soup = BeautifulSoup(greeting, features="xml")
         svid = soup.find('svid')
         version = soup.find('version')
         print("Connected to %s (v%s)\n" % (svid.text, version.text))
