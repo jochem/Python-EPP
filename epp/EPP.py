@@ -16,13 +16,22 @@ class EPP:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(2)
         self.socket.connect((self.config['host'], self.config['port']))
-        self.ssl = ssl.wrap_socket(self.socket)
+        try:
+            self.ssl = ssl.wrap_socket(self.socket)
+        except socket.error:
+            print "ERROR: Could not setup a secure connection."
+            print "Check whether your IP is allowed to connect to the host."
+            exit(1)
         self.format_32 = self.format_32()
         self.login()
 
     def __del__(self):
-        self.logout()
-        self.socket.close()
+        try:
+            self.logout()
+            self.socket.close()
+        except TypeError:
+            """ Will occur when not properly connected """
+            pass
 
     # http://www.bortzmeyer.org/4934.html
     def format_32(self):
