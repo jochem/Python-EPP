@@ -1,6 +1,8 @@
 Python-EPP
 ==========
 
+[![PyPI version](https://badge.fury.io/py/Python-EPP.png)](http://badge.fury.io/py/Python-EPP)
+
 EPP client written in Python. Development is still in an early phase, but most of this should actually work. Tested against the Dutch SIDN DRS5 interface.
 
 Usage
