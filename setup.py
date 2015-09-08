@@ -1,11 +1,11 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='Python-EPP',
     version='0.1.0',
     author='Jochem Oosterveen',
     author_email='jochem@oosterveen.net',
-    packages=['EPP'],
+    packages=find_packages(),
     description='Python EPP client',
     long_description=(
         "Python-EPP provides an interface to the Extensible Provisioning "
